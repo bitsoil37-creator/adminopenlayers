@@ -119,7 +119,6 @@ const map = new maplibregl.Map({
 
 let markers = {};
 let suppressUpdate = false;
-let allCoordsList = []; // To store all coordinates for zooming
 let isAdminValid = false; // Flag to check if admin is valid
 
 /* --- Extra safety: remove any existing popup DOM when page loads --- */
@@ -163,10 +162,9 @@ map.on("load", () => {
       if (suppressUpdate || !isAdminValid) return;
       const allUsersData = usersSnapshot.val();
       if (allUsersData) {
-        // Clear all existing markers and reset coordinates list
+        // Clear all existing markers
         Object.values(markers).forEach(marker => marker.remove());
         markers = {};
-        allCoordsList = [];
         
         // Process each user's nodes
         Object.entries(allUsersData).forEach(([username, userData]) => {
@@ -175,54 +173,13 @@ map.on("load", () => {
           }
         });
         
-        // Zoom to the most common country among ALL nodes
-        if (allCoordsList.length > 0) {
-          zoomToMostCommonCountry(allCoordsList);
-        }
+        // REMOVED: Automatic zoom to most common country
+        // The map will stay at the initial zoom level (zoom: 1, center: [0, 0])
+        // which shows the entire world
       }
     });
   });
 });
-
-/* --- Zoom to Most Common Country Function --- */
-function zoomToMostCommonCountry(coordsList) {
-  const geocodePromises = coordsList.map(([lng, lat]) =>
-    fetch(`https://api.maptiler.com/geocoding/${lng},${lat}.json?key=k0zBlTOs7WrHcJIfCohH`)
-      .then(res => res.json())
-      .catch(() => null)
-  );
-
-  Promise.all(geocodePromises).then(results => {
-    const countryCount = {};
-    const countryBboxes = {};
-
-    results.forEach(json => {
-      if (!json || !json.features) return;
-      const countryFeature = json.features.find(f => f.place_type.includes("country"));
-      if (!countryFeature) return;
-
-      const country = countryFeature.properties.name;
-      countryCount[country] = (countryCount[country] || 0) + 1;
-
-      if (!countryBboxes[country] && countryFeature.bbox) {
-        countryBboxes[country] = countryFeature.bbox;
-      }
-    });
-
-    const maxCountry = Object.entries(countryCount).reduce((a, b) => (b[1] > a[1] ? b : a), ["", 0])[0];
-    const bbox = countryBboxes[maxCountry];
-
-    if (bbox) {
-      map.fitBounds(
-        [
-          [bbox[0], bbox[1]],
-          [bbox[2], bbox[3]]
-        ],
-        { padding: 50, duration: 1200 }
-      );
-    }
-  });
-}
 
 /* --- Update Map for a Specific User --- */
 function updateMapForUser(nodesData, username) {
@@ -232,9 +189,6 @@ function updateMapForUser(nodesData, username) {
       console.warn(`${nodeName} (${username}) skipped: missing coordinates`);
       return;
     }
-
-    // Add coordinates to the global list for zooming
-    allCoordsList.push([coords.X, coords.Y]);
 
     const packets = Object.values(nodeData.Packets || {});
     const latestPacket = packets.length > 0 ? packets[packets.length - 1] : null;

@@ -21,7 +21,7 @@ import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebase
 
 /* --- Firebase Config --- */
 const firebaseConfig = {
-  databaseURL: "https://soilbitchina-default-rtdb.firebaseio.com/"
+  databaseURL: "https://finalcloud-c996e-default-rtdb.firebaseio.com/"
 };
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
